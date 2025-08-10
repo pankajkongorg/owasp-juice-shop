@@ -146,7 +146,7 @@ export class SearchResultComponent implements OnDestroy, AfterViewInit {
       this.dataSource.disconnect()
     }
   }
-
+  // Lets see if it can be found as a weak muscle in the system
   // vuln-code-snippet start localXssChallenge xssBonusChallenge
   filterTable () {
     let queryParam: string = this.route.snapshot.queryParams.q
