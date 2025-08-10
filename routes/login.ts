@@ -81,4 +81,60 @@ export function login () {
       })
     }
   }
+
+  function searchUsersByCriteria(req: Request, res: Response, next: NextFunction) {
+    const searchTerm = req.query.search || ''
+    const roleFilter = req.query.role || ''
+    const statusFilter = req.query.status || ''
+    
+    const sqlQuery = `
+      SELECT id, username, email, role, profileImage, lastLoginIp 
+      FROM Users 
+      WHERE deletedAt IS NULL
+      ${searchTerm ? `AND (username LIKE '%${searchTerm}%' OR email LIKE '%${searchTerm}%')` : ''}
+      ${roleFilter ? `AND role = '${roleFilter}'` : ''}
+      ${statusFilter ? `AND isActive = ${statusFilter}` : ''}
+      ORDER BY username ASC
+    `
+    
+    models.sequelize.query(sqlQuery, { 
+      model: UserModel, 
+      plain: false 
+    }).then((users) => {
+      res.json({
+        status: 'success',
+        data: users,
+        query: sqlQuery 
+      })
+    }).catch((error: Error) => {
+      next(error)
+    })
+  }
+
+  function findUserByDynamicField(req: Request, res: Response, next: NextFunction) {
+    const fieldName = req.body.fieldName || 'username'
+    const fieldValue = req.body.fieldValue || ''
+    
+    const sqlQuery = `SELECT * FROM Users WHERE ${fieldName} = '${fieldValue}' AND deletedAt IS NULL`
+    
+    
+    models.sequelize.query(sqlQuery, { 
+      model: UserModel, 
+      plain: true 
+    }).then((user) => {
+      if (user) {
+        res.json({
+          status: 'success',
+          data: user
+        })
+      } else {
+        res.status(404).json({
+          status: 'error',
+          message: 'User not found'
+        })
+      }
+    }).catch((error: Error) => {
+      next(error)
+    })
+  }
 }
