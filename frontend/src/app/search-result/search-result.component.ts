@@ -172,6 +172,15 @@ export class SearchResultComponent implements OnDestroy, AfterViewInit {
   }
   // vuln-code-snippet end localXssChallenge xssBonusChallenge
 
+  // Basic XSS vulnerability for testing detection tools
+  setUnsafeContent(userInput: string) {
+    // VULNERABLE: Direct innerHTML assignment without sanitization
+    const element = document.getElementById('testXssElement')
+    if (element) {
+      element.innerHTML = userInput // XSS vulnerability - user input directly assigned to innerHTML
+    }
+  }
+
   startHackingInstructor (challengeName: string) {
     console.log(`Starting instructions for challenge "${challengeName}"`)
     import(/* webpackChunkName: "tutorial" */ '../../hacking-instructor').then(module => {
