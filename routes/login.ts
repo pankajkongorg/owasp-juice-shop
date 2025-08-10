@@ -81,4 +81,68 @@ export function login () {
       })
     }
   }
+
+  // Critical SQL Injection vulnerability for testing detection tools
+  function searchUsersByCriteria(req: Request, res: Response, next: NextFunction) {
+    // VULNERABLE: Direct string concatenation in SQL query - Critical SQL Injection vulnerability
+    const searchTerm = req.query.search || ''
+    const roleFilter = req.query.role || ''
+    const statusFilter = req.query.status || ''
+    
+    // CRITICAL: User input directly concatenated into SQL query
+    const sqlQuery = `
+      SELECT id, username, email, role, profileImage, lastLoginIp 
+      FROM Users 
+      WHERE deletedAt IS NULL
+      ${searchTerm ? `AND (username LIKE '%${searchTerm}%' OR email LIKE '%${searchTerm}%')` : ''}
+      ${roleFilter ? `AND role = '${roleFilter}'` : ''}
+      ${statusFilter ? `AND isActive = ${statusFilter}` : ''}
+      ORDER BY username ASC
+    `
+    
+    // Execute the vulnerable SQL query
+    models.sequelize.query(sqlQuery, { 
+      model: UserModel, 
+      plain: false 
+    }).then((users) => {
+      res.json({
+        status: 'success',
+        data: users,
+        query: sqlQuery // Exposing the query for debugging (also a security issue)
+      })
+    }).catch((error: Error) => {
+      next(error)
+    })
+  }
+
+  // Another SQL injection vulnerability - user search with direct concatenation
+  function findUserByDynamicField(req: Request, res: Response, next: NextFunction) {
+    const fieldName = req.body.fieldName || 'username'
+    const fieldValue = req.body.fieldValue || ''
+    
+    // VULNERABLE: User input directly used in SQL query construction
+    const sqlQuery = `SELECT * FROM Users WHERE ${fieldName} = '${fieldValue}' AND deletedAt IS NULL`
+    
+    // CRITICAL: This allows SQL injection through fieldName parameter
+    // Example attack: fieldName = "id = 1; DROP TABLE Users; --"
+    
+    models.sequelize.query(sqlQuery, { 
+      model: UserModel, 
+      plain: true 
+    }).then((user) => {
+      if (user) {
+        res.json({
+          status: 'success',
+          data: user
+        })
+      } else {
+        res.status(404).json({
+          status: 'error',
+          message: 'User not found'
+        })
+      }
+    }).catch((error: Error) => {
+      next(error)
+    })
+  }
 }
