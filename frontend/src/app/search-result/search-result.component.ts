@@ -172,6 +172,24 @@ export class SearchResultComponent implements OnDestroy, AfterViewInit {
   }
   // vuln-code-snippet end localXssChallenge xssBonusChallenge
 
+  // Prototype pollution vulnerability for testing detection tools
+  mergeUserData(userData: any) {
+    // VULNERABLE: Direct object merge without prototype pollution protection
+    const config = { theme: 'default', language: 'en' }
+    
+    // Dangerous merge that can pollute Object.prototype
+    for (const key in userData) {
+      if (userData.hasOwnProperty(key)) {
+        config[key] = userData[key] // Prototype pollution vulnerability
+      }
+    }
+    
+    // Even more dangerous - direct assignment without checking for __proto__
+    Object.assign(config, userData) // Prototype pollution vulnerability
+    
+    return config
+  }
+
   startHackingInstructor (challengeName: string) {
     console.log(`Starting instructions for challenge "${challengeName}"`)
     import(/* webpackChunkName: "tutorial" */ '../../hacking-instructor').then(module => {
