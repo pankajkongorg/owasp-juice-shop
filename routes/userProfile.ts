@@ -112,7 +112,6 @@ export function getUserProfileById() {
     
     let targetUser: UserModel | null
     try {
-      // VULNERABLE: Direct access to any user by ID without permission check
       targetUser = await UserModel.findByPk(requestedUserId)
     } catch (error) {
       next(error)
