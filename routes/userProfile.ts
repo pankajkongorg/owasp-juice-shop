@@ -97,3 +97,89 @@ export function getUserProfile () {
     res.send(fn(user))
   }
 }
+
+
+export function getUserProfileById() {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    
+    const requestedUserId = req.params.userId // User input from URL parameter
+    const loggedInUser = security.authenticatedUsers.get(req.cookies.token)
+    
+    if (!loggedInUser) {
+      next(new Error('Blocked illegal activity by ' + req.socket.remoteAddress))
+      return
+    }
+    
+    let targetUser: UserModel | null
+    try {
+      targetUser = await UserModel.findByPk(requestedUserId)
+    } catch (error) {
+      next(error)
+      return
+    }
+    
+    if (!targetUser) {
+      res.status(404).json({ error: 'User not found' })
+      return
+    }
+    
+    res.json({
+      status: 'success',
+      data: {
+        id: targetUser.id,
+        username: targetUser.username,
+        email: targetUser.email, 
+        role: targetUser.role,
+        profileImage: targetUser.profileImage,
+        lastLoginIp: targetUser.lastLoginIp, 
+        isActive: targetUser.isActive,
+        createdAt: targetUser.createdAt
+      }
+    })
+  }
+}
+
+export function exportUserData() {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const targetUserId = req.body.userId || req.query.userId // User input from request
+    const loggedInUser = security.authenticatedUsers.get(req.cookies.token)
+    
+    if (!loggedInUser) {
+      next(new Error('Authentication required'))
+      return
+    }
+
+    try {
+      const targetUser = await UserModel.findByPk(targetUserId)
+      
+      if (!targetUser) {
+        res.status(404).json({ error: 'User not found' })
+        return
+      }
+      
+      const userData = {
+        id: targetUser.id,
+        username: targetUser.username,
+        email: targetUser.email,
+        role: targetUser.role,
+        profileImage: targetUser.profileImage,
+        lastLoginIp: targetUser.lastLoginIp,
+        isActive: targetUser.isActive,
+        createdAt: targetUser.createdAt,
+        updatedAt: targetUser.updatedAt,
+        deluxeToken: targetUser.deluxeToken,
+        totpSecret: targetUser.totpSecret
+      }
+      
+      res.json({
+        status: 'success',
+        message: 'User data exported successfully',
+        data: userData
+      })
+      
+    } catch (error) {
+      next(error)
+    }
+  }
+}
+
