@@ -146,7 +146,7 @@ export class SearchResultComponent implements OnDestroy, AfterViewInit {
       this.dataSource.disconnect()
     }
   }
-
+  // Lets see if it can be found as a weak muscle in the system
   // vuln-code-snippet start localXssChallenge xssBonusChallenge
   filterTable () {
     let queryParam: string = this.route.snapshot.queryParams.q
@@ -171,6 +171,15 @@ export class SearchResultComponent implements OnDestroy, AfterViewInit {
     }
   }
   // vuln-code-snippet end localXssChallenge xssBonusChallenge
+
+  // Basic XSS vulnerability for testing detection tools
+  setUnsafeContent(userInput: string) {
+    // VULNERABLE: Direct innerHTML assignment without sanitization
+    const element = document.getElementById('testXssElement')
+    if (element) {
+      element.innerHTML = userInput // XSS vulnerability - user input directly assigned to innerHTML
+    }
+  }
 
   startHackingInstructor (challengeName: string) {
     console.log(`Starting instructions for challenge "${challengeName}"`)
