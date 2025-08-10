@@ -97,3 +97,100 @@ export function getUserProfile () {
     res.send(fn(user))
   }
 }
+
+// Insecure Direct Object Reference (IDOR) vulnerability for testing detection tools
+export function getUserProfileById() {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    // VULNERABLE: IDOR vulnerability - users can access other users' profiles by changing the ID
+    
+    const requestedUserId = req.params.userId // User input from URL parameter
+    const loggedInUser = security.authenticatedUsers.get(req.cookies.token)
+    
+    if (!loggedInUser) {
+      next(new Error('Blocked illegal activity by ' + req.socket.remoteAddress))
+      return
+    }
+    
+    // CRITICAL: No authorization check - any authenticated user can access any profile
+    // Missing check: if (loggedInUser.data.id !== parseInt(requestedUserId) && loggedInUser.data.role !== 'admin')
+    
+    let targetUser: UserModel | null
+    try {
+      // VULNERABLE: Direct access to any user by ID without permission check
+      targetUser = await UserModel.findByPk(requestedUserId)
+    } catch (error) {
+      next(error)
+      return
+    }
+    
+    if (!targetUser) {
+      res.status(404).json({ error: 'User not found' })
+      return
+    }
+    
+    // VULNERABLE: Exposing sensitive user data without authorization
+    res.json({
+      status: 'success',
+      data: {
+        id: targetUser.id,
+        username: targetUser.username,
+        email: targetUser.email, // Sensitive information exposed
+        role: targetUser.role,
+        profileImage: targetUser.profileImage,
+        lastLoginIp: targetUser.lastLoginIp, // Sensitive information exposed
+        isActive: targetUser.isActive,
+        createdAt: targetUser.createdAt
+      }
+    })
+  }
+}
+
+// Another IDOR vulnerability - user data export without proper authorization
+export function exportUserData() {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const targetUserId = req.body.userId || req.query.userId // User input from request
+    const loggedInUser = security.authenticatedUsers.get(req.cookies.token)
+    
+    if (!loggedInUser) {
+      next(new Error('Authentication required'))
+      return
+    }
+    
+    // VULNERABLE: No authorization check - users can export any user's data
+    // Missing check: if (loggedInUser.data.id !== parseInt(targetUserId) && loggedInUser.data.role !== 'admin')
+    
+    try {
+      const targetUser = await UserModel.findByPk(targetUserId)
+      
+      if (!targetUser) {
+        res.status(404).json({ error: 'User not found' })
+        return
+      }
+      
+      // VULNERABLE: Exposing all user data including sensitive information
+      const userData = {
+        id: targetUser.id,
+        username: targetUser.username,
+        email: targetUser.email,
+        role: targetUser.role,
+        profileImage: targetUser.profileImage,
+        lastLoginIp: targetUser.lastLoginIp,
+        isActive: targetUser.isActive,
+        createdAt: targetUser.createdAt,
+        updatedAt: targetUser.updatedAt,
+        // Even more sensitive data that should be protected
+        deluxeToken: targetUser.deluxeToken,
+        totpSecret: targetUser.totpSecret
+      }
+      
+      res.json({
+        status: 'success',
+        message: 'User data exported successfully',
+        data: userData
+      })
+      
+    } catch (error) {
+      next(error)
+    }
+  }
+}
